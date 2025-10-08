@@ -1,0 +1,55 @@
+# Author: Myapit@MHOpenSolution <9w2xhr>
+# Date: September 2025
+# Description: Compose File Spesific For Use with Moodle solution
+
+services:
+  moodle:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"
+    environment:
+      - MOODLE_DATABASE_HOST=db
+      - MOODLE_DATABASE_NAME=moodle
+      - MOODLE_DATABASE_USER=moodle
+      - MOODLE_DATABASE_PASSWORD=moodle
+      - MOODLE_DATABASE_PORT=3306
+    volumes:
+      - ./moodle_data:/var/moodledata # MOODLE DATA DIR
+      - ./moodle_html:/var/www/html   # MOODLE PHP SCRIPTS
+      - ./php-config:/usr/local/etc/php # PHP CONFIG TO RUN MOODLE
+    depends_on:
+      - db
+    networks:
+      - moodle-mynetwork
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  db:
+    image: mariadb:10.11
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: moodle
+      MYSQL_USER: moodle
+      MYSQL_PASSWORD: moodle
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MARIADB_AUTO_UPGRADE: 1
+    volumes:
+      - ./mysql_data:/var/lib/mysql
+      - ./mysql.cnf:/etc/mysql/conf.d/custom.cnf
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --innodb-file-per-table=1 --innodb-file-format=Barracuda
+    networks:
+      - moodle-mynetwork
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+
+networks:
+  moodle-mynetwork:
+    driver: bridge
